@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
     
     while (1) {
 
-        int argument = getopt_long(argc, argv, "i:h", options, NULL);
+        char argument = getopt_long(argc, argv, "i:h", options, NULL);
 
         if (argument == -1) {
             break;

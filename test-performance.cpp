@@ -35,7 +35,9 @@
 #include <seqan/seeds.h>
 #include <seqan/score.h>
 #include <seqan/modifier.h>
-#include "../cpu-nosimd/logan-functions.h"
+// #include "../cpu-nosimd/logan-functions.h"
+#include <swsharp/swsharp.h>
+#include <swsharp/evalue.h>
 
 using namespace std;
 //using namespace seqan;
@@ -48,6 +50,58 @@ using namespace std;
 
 typedef seqan::Seed<seqan::Simple> TSeed;
 typedef std::tuple< int, int, int, int, int, double > myinfo;	// score, start seedV, end seedV, start seedH, end seedH, runtime
+
+
+
+class Okada2015 {
+ private:
+  Scorer* scorer;
+  int cards[20];
+  int cards_len;
+
+ public:
+  Okada2015(int match=1, int mismatch=-3, int gap_open=5, int gap_extend=2){
+    // create a scorer object
+    // match = 1
+    // mismatch = -3
+    // gap open = 5
+    // gap extend = 2
+    scorerCreateScalar(&scorer, match, mismatch, gap_open, gap_extend);    
+    assert(scorer!=NULL);
+
+    // use one CUDA card with index 0
+    cards[0]  = 0;
+    cards_len = 1;
+  }
+
+  ~Okada2015(){
+    scorerDelete(scorer);
+  }
+
+  //TODO: has a mulitple-align option called `alignBest()`
+  void align(const std::string &query, const std::string &target){
+    const std::string query_name  = "query";
+    const std::string target_name = "target";
+
+    Chain *const queryc  = chainCreate(query_name.data(),  query_name.size(),  query.data(),  query.size() );
+    Chain *const targetc = chainCreate(target_name.data(), target_name.size(), target.data(), target.size());
+    
+    // do the pairwise alignment, use Smith-Waterman algorithm
+    Alignment* alignment;
+    assert(scorer!=NULL);
+    alignPair(&alignment, SW_ALIGN, queryc, targetc, scorer, cards, cards_len, NULL);
+     
+    // output the results in emboss stat-pair format
+    //outputAlignment(alignment, NULL, SW_OUT_STAT_PAIR);
+    
+    alignmentDelete(alignment);
+
+    chainDelete(queryc);
+    chainDelete(targetc);
+  }
+};
+
+
 
 char dummycomplement (char n)
 {	
@@ -111,31 +165,33 @@ myinfo seqanXdrop(seqan::Dna5String& readV, seqan::Dna5String& readH, int posV, 
 	return seqanresult;
 }
 
+
 // typedef std::tuple< int, int, int, int, double > myinfo;	// score, start seed, end seed, runtime
+//posv - starting positions on readv
+//posh - starting position on readh
+//mat - match score
+//mis - mismatch score
+//gap - gap score
 myinfo loganXdrop(std::string& readV, std::string& readH, int posV, int posH, int mat, int mis, int gap, int kmerLen, int xdrop)
 {
+ 	Okada2015 okada_alignment(mat, mis, 5, gap);
 
-	ScoringSchemeL penalties(mat, mis, gap);
-	//Result result(kmerLen);
-	int result;
-	myinfo loganresult;
+	int result = -1;
 
-	std::chrono::duration<double>  diff_l;
 	SeedL seed(posH, posV, kmerLen);
 	//std::cout << "\t\t"<< getBeginPositionV(seed) << "\t" << getEndPositionV(seed) << "\t" << getBeginPositionH(seed) << "\t" << getEndPositionH(seed) << endl;
 	// perform match extension	
 	auto start_l = std::chrono::high_resolution_clock::now();
 	// GGGG: double check call function
-	result = extendSeedL(seed, EXTEND_BOTHL, readH, readV, penalties, xdrop, kmerLen);
+	okada_alignment.align(readV, readH);
 	auto end_l = std::chrono::high_resolution_clock::now();
-	diff_l = end_l-start_l;
+	std::chrono::duration<double> diff_l = end_l-start_l;
 
 	//std::cout << "logan score:\t" << result << "\tlogan time:\t" <<  diff_l.count() <<std::endl;
 	//std::cout << "Longest\t" << result << "\t" << getBeginPositionV(seed) << "\t" << getEndPositionV(seed) << "\t" << getBeginPositionH(seed) << "\t" << getEndPositionH(seed) << endl;
 
 	//double time_l = diff_l.count();
-	loganresult = std::make_tuple(result, getBeginPositionV(seed), getEndPositionV(seed), getBeginPositionH(seed), getEndPositionH(seed), diff_l.count());
-	return loganresult;
+	return std::make_tuple(result, getBeginPositionV(seed), getEndPositionV(seed), getBeginPositionH(seed), getEndPositionH(seed), diff_l.count());
 }
 
 //=======================================================================

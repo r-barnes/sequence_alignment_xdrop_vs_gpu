@@ -1,11 +1,8 @@
 COMPILER = g++
 COMPILER_GPU = nvcc
 CC = gcc
-CFLAGS = -I. -O3 -Wall -Wextra -pedantic -ansi -c -Wno-write-strings
+CFLAGS = -I. -O3 -Wall -Wextra -pedantic -ansi -c -Wno-write-strings -Iokada2015/
 SEQINCLUDE=	-Iseqan
-
-optlist.o:	../optlist/optlist.c ../optlist/optlist.h
-	$(CC) $(CFLAGS) $<
 
 test: test-performance.cpp
 

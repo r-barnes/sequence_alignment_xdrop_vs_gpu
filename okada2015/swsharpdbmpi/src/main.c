@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
 
     while (1) {
 
-        int argument = getopt_long(argc, argv, "i:j:g:e:hT:", options, NULL);
+        char argument = getopt_long(argc, argv, "i:j:g:e:hT:", options, NULL);
 
         if (argument == -1) {
             break;

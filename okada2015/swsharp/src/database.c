@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Contact the author by mkorpar@gmail.com.
 */
 
-#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,21 +50,21 @@ Contact the author by mkorpar@gmail.com.
 
 typedef struct Context {
     DbAlignment*** dbAlignments;
-    int*           dbAlignmentsLen;
-    int            type;
-    Chain**        queries;
-    int            queriesLen;
+    int* dbAlignmentsLen;
+    int type;
+    Chain** queries;
+    int queriesLen;
     ChainDatabase* chainDatabase;
-    Scorer*        scorer;
-    int            maxAlignments;
-    ValueFunction  valueFunction;
-    void*          valueFunctionParam;
-    double         valueThreshold;
-    int*           indexes;
-    int            indexesLen;
-    int*           cards;
-    int            cardsLen;
-    Thread*        thread;
+    Scorer* scorer;
+    int maxAlignments;
+    ValueFunction valueFunction;
+    void* valueFunctionParam;
+    double valueThreshold;
+    int* indexes;
+    int indexesLen;
+    int* cards;
+    int cardsLen;
+    Thread* thread;
 } Context;
 
 typedef struct DbAlignmentData {
@@ -211,14 +210,15 @@ extern ChainDatabase* chainDatabaseCreate(Chain** database, int databaseStart,
     
     TIMER_START("Creating database");
     
-    db->database      = database + databaseStart;
+    db->database = database + databaseStart;
     db->databaseStart = databaseStart;
-    db->databaseLen   = databaseLen;
+    db->databaseLen = databaseLen;
     
+    int i;
     long databaseElems = 0;
-    for (int i = 0; i < databaseLen; ++i)
+    for (i = 0; i < databaseLen; ++i) {
         databaseElems += chainGetLength(db->database[i]);
-
+    }
     db->databaseElems = databaseElems;
     
     db->chainDatabaseGpu = chainDatabaseGpuCreate(db->database, databaseLen, 
@@ -278,21 +278,21 @@ static void databaseSearch(DbAlignment*** dbAlignments, int* dbAlignmentsLen,
     
     Context* param = (Context*) malloc(sizeof(Context));
     
-    param->dbAlignments       = dbAlignments;
-    param->dbAlignmentsLen    = dbAlignmentsLen;
-    param->type               = type;
-    param->queries            = queries;
-    param->queriesLen         = queriesLen;
-    param->chainDatabase      = chainDatabase;
-    param->scorer             = scorer;
-    param->maxAlignments      = maxAlignments;
-    param->valueFunction      = valueFunction;
+    param->dbAlignments = dbAlignments;
+    param->dbAlignmentsLen = dbAlignmentsLen;
+    param->type = type;
+    param->queries = queries;
+    param->queriesLen = queriesLen;
+    param->chainDatabase = chainDatabase;
+    param->scorer = scorer;
+    param->maxAlignments = maxAlignments;
+    param->valueFunction = valueFunction;
     param->valueFunctionParam = valueFunctionParam;
-    param->valueThreshold     = valueThreshold;
-    param->indexes            = indexes;
-    param->indexesLen         = indexesLen;
-    param->cards              = cards;
-    param->cardsLen           = cardsLen;
+    param->valueThreshold = valueThreshold;
+    param->indexes = indexes;
+    param->indexesLen = indexesLen;
+    param->cards = cards;
+    param->cardsLen = cardsLen;
     
     if (thread == NULL) {
         databaseSearchThread(param);
@@ -305,25 +305,26 @@ static void* databaseSearchThread(void* param) {
 
     Context* context = (Context*) param;
     
-    DbAlignment*** dbAlignments  = context->dbAlignments;
-    int* dbAlignmentsLen         = context->dbAlignmentsLen;
-    int type                     = context->type;
-    Chain** queries              = context->queries;
-    int queriesLen               = context->queriesLen;
+    DbAlignment*** dbAlignments = context->dbAlignments;
+    int* dbAlignmentsLen = context->dbAlignmentsLen;
+    int type = context->type;
+    Chain** queries = context->queries;
+    int queriesLen = context->queriesLen;
     ChainDatabase* chainDatabase = context->chainDatabase;
-    Scorer* scorer               = context->scorer;
-    int maxAlignments            = context->maxAlignments;
-    ValueFunction valueFunction  = context->valueFunction;
-    void* valueFunctionParam     = context->valueFunctionParam;
-    double valueThreshold        = context->valueThreshold;
-    int* cards                   = context->cards;
-    int cardsLen                 = context->cardsLen;
-
-    assert(chainDatabase!=NULL);    
+    Scorer* scorer = context->scorer;
+    int maxAlignments = context->maxAlignments;
+    ValueFunction valueFunction = context->valueFunction;
+    void* valueFunctionParam = context->valueFunctionParam;
+    double valueThreshold = context->valueThreshold;
+    int* cards = context->cards;
+    int cardsLen = context->cardsLen;
+    
     int databaseStart = chainDatabase->databaseStart;
-    int databaseLen   = chainDatabase->databaseLen;
+    int databaseLen = chainDatabase->databaseLen;
     
     TIMER_START("Database search");
+    
+    int i;
     
     //**************************************************************************
     // FIX INDEXES 
@@ -334,7 +335,7 @@ static void* databaseSearchThread(void* param) {
     filterIndexesArray(&indexes, &indexesLen, context->indexes, 
         context->indexesLen, databaseStart, databaseStart + databaseLen - 1);
 
-    for (int i = 0; i < indexesLen; ++i) {
+    for (i = 0; i < indexesLen; ++i) {
         indexes[i] -= databaseStart;
     }    
     
@@ -357,18 +358,18 @@ static void* databaseSearchThread(void* param) {
     // DO THE ALIGN
      
     double memory = (double) databaseLen * queriesLen * sizeof(int); // scores
-    memory        = (memory * 1.15) / 1024.0 / 1024.0; // 15% offset and to MB
+    memory = (memory * 1.15) / 1024.0 / 1024.0; // 15% offset and to MB
     
     // chop in pieces
-    int steps        = MIN(queriesLen, (int) ceil(memory / (1 * 1024.0)));
+    int steps = MIN(queriesLen, (int) ceil(memory / (1 * 1024.0)));
     int queriesChunk = queriesLen / steps;
-    int queriesAdd   = queriesLen % steps;
-    int offset       = 0;
+    int queriesAdd = queriesLen % steps;
+    int offset = 0;
 
     LOG("need %.2lfMB total, %d queries, solving in %d steps", memory, 
         queriesLen, steps);
 
-    for (int i = 0; i < steps; ++i) {
+    for (i = 0; i < steps; ++i) {
     
         int length = queriesChunk + (i < queriesAdd);
 
@@ -405,17 +406,19 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
     double valueThreshold, int* indexes, int indexesLen, int* cards, 
     int cardsLen) {
     
-    Chain** database   = chainDatabase->database;
-    int  databaseStart = chainDatabase->databaseStart;
-    int  databaseLen   = chainDatabase->databaseLen;
+    Chain** database = chainDatabase->database;
+    int databaseStart = chainDatabase->databaseStart;
+    int databaseLen = chainDatabase->databaseLen;
     long databaseElems = chainDatabase->databaseElems;
     ChainDatabaseGpu* chainDatabaseGpu = chainDatabase->chainDatabaseGpu;
+    
+    int i, j, k;
     
     //**************************************************************************
     // CALCULATE CELL NUMBER
     
     long queriesElems = 0;
-    for (int i = 0; i < queriesLen; ++i) {
+    for (i = 0; i < queriesLen; ++i) {
         queriesElems += chainGetLength(queries[i]);
     }
     
@@ -423,7 +426,7 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
     
         databaseElems = 0;
         
-        for (int i = 0; i < indexesLen; ++i) {
+        for (i = 0; i < indexesLen; ++i) {
             databaseElems += chainGetLength(database[indexes[i]]);
         }
     }
@@ -458,19 +461,19 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
     ExtractContext* eContexts = 
         (ExtractContext*) malloc(queriesLen * sizeof(ExtractContext));
     
-    for (int i = 0; i < queriesLen; ++i) {
-        eContexts[i].dbAlignmentData    = &(dbAlignmentsData[i]);
-        eContexts[i].dbAlignmentLen     = &(dbAlignmentsLen[i]);
-        eContexts[i].query              = queries[i];
-        eContexts[i].database           = database;
-        eContexts[i].databaseLen        = databaseLen;
-        eContexts[i].scores             = scores + i * databaseLen;
-        eContexts[i].maxAlignments      = maxAlignments;
-        eContexts[i].valueFunction      = valueFunction;
+    for (i = 0; i < queriesLen; ++i) {
+        eContexts[i].dbAlignmentData = &(dbAlignmentsData[i]);
+        eContexts[i].dbAlignmentLen = &(dbAlignmentsLen[i]);
+        eContexts[i].query = queries[i];
+        eContexts[i].database = database;
+        eContexts[i].databaseLen = databaseLen;
+        eContexts[i].scores = scores + i * databaseLen;
+        eContexts[i].maxAlignments = maxAlignments;
+        eContexts[i].valueFunction = valueFunction;
         eContexts[i].valueFunctionParam = valueFunctionParam;
-        eContexts[i].valueThreshold     = valueThreshold;
-        eContexts[i].cards              = cards;
-        eContexts[i].cardsLen           = cardsLen;
+        eContexts[i].valueThreshold = valueThreshold;
+        eContexts[i].cards = cards;
+        eContexts[i].cardsLen = cardsLen;
     }
 
     if (cardsLen == 0) {
@@ -478,11 +481,11 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
         size_t tasksSize = queriesLen * sizeof(ThreadPoolTask*);
         ThreadPoolTask** tasks = (ThreadPoolTask**) malloc(tasksSize);
 
-        for (int i = 0; i < queriesLen; ++i) {
+        for (i = 0; i < queriesLen; ++i) {
             tasks[i] = threadPoolSubmit(extractThread, (void*) &(eContexts[i]));
         }
         
-        for (int i = 0; i < queriesLen; ++i) {
+        for (i = 0; i < queriesLen; ++i) {
             threadPoolTaskWait(tasks[i]);
             threadPoolTaskDelete(tasks[i]);
         }
@@ -507,7 +510,7 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
         size_t tasksSize = chunks * sizeof(Thread);
         Thread* tasks = (Thread*) malloc(tasksSize);
 
-        for (int i = 0; i < chunks; ++i) {
+        for (i = 0; i < chunks; ++i) {
 
             int* cards_ = cards + cardsOff;
             int cardsLen_ = cardsChunk + (i < cardsAdd);
@@ -517,7 +520,7 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
             int contextsLen_ = contextsChunk + (i < contextsAdd);
             contextsOff += contextsLen_;
 
-            for (int j = 0; j < contextsLen_; ++j) {
+            for (j = 0; j < contextsLen_; ++j) {
                 contexts_[j].cards = cards_;
                 contexts_[j].cardsLen = cardsLen_;
             }
@@ -528,7 +531,7 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
             threadCreate(&(tasks[i]), extractsThread, &(contexts[i]));
         }
 
-        for (int i = 0; i < chunks; ++i) {
+        for (i = 0; i < chunks; ++i) {
             threadJoin(tasks[i]);
         }
 
@@ -549,14 +552,14 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
     TIMER_START("Database aligning");
     
     // create structure
-    for (int i = 0; i < queriesLen; ++i) {
+    for (i = 0; i < queriesLen; ++i) {
         size_t dbAlignmentsSize = dbAlignmentsLen[i] * sizeof(DbAlignment*);
         dbAlignments[i] = (DbAlignment**) malloc(dbAlignmentsSize);
     }
     
     // count tasks
     int aTasksLen = 0;
-    for (int i = 0; i < queriesLen; ++i) {
+    for (i = 0; i < queriesLen; ++i) {
         aTasksLen += dbAlignmentsLen[i];
     }
     
@@ -569,12 +572,12 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
     int aContextsCpuLen = 0;
     int aContextsGpuLen = 0;
     
-    for (int i = 0, k = 0; i < queriesLen; ++i, ++k) {
+    for (i = 0, k = 0; i < queriesLen; ++i, ++k) {
     
         Chain* query = queries[i];
         int rows = chainGetLength(query);
 
-        for (int j = 0; j < dbAlignmentsLen[i]; ++j, ++k) {
+        for (j = 0; j < dbAlignmentsLen[i]; ++j, ++k) {
             
             DbAlignmentData data = dbAlignmentsData[i][j];
             Chain* target = database[data.idx];
@@ -584,23 +587,23 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
 
             AlignContext* context;
             if (cols < GPU_MIN_LEN || cells < GPU_MIN_CELLS || cardsLen == 0) {
-                context           = &(aContextsCpu[aContextsCpuLen++]);
-                context->cards    = NULL;
+                context = &(aContextsCpu[aContextsCpuLen++]);
+                context->cards = NULL;
                 context->cardsLen = 0;
             } else {
                 context = &(aContextsGpu[aContextsGpuLen++]);
             }
 
             context->dbAlignment = &(dbAlignments[i][j]);
-            context->type        = type;
-            context->query       = query;
-            context->queryIdx    = i;
-            context->target      = target;
-            context->targetIdx   = data.idx + databaseStart;
-            context->value       = data.value;
-            context->score       = data.score;
-            context->scorer      = scorer;
-            context->cells       = cells;
+            context->type = type;
+            context->query = query;
+            context->queryIdx = i;
+            context->target = target;
+            context->targetIdx = data.idx + databaseStart;
+            context->value = data.value;
+            context->score = data.score;
+            context->scorer = scorer;
+            context->cells = cells;
         }
     }
     
@@ -615,7 +618,7 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
         aCpuTasksLen = aContextsCpuLen;
         aContextsCpuPacked = NULL;
 
-        for (int i = 0; i < aCpuTasksLen; ++i) {
+        for (i = 0; i < aCpuTasksLen; ++i) {
             aTasks[i] = threadPoolSubmit(alignThread, &(aContextsCpu[i]));
         }
 
@@ -627,7 +630,7 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
         size_t contextsSize = aCpuTasksLen * sizeof(AlignContextsPacked);
         AlignContextsPacked* contexts = (AlignContextsPacked*) malloc(contextsSize);
 
-        for (int i = 0; i < aCpuTasksLen; ++i) {
+        for (i = 0; i < aCpuTasksLen; ++i) {
 
             int length = MIN(CPU_PACKED_CHUNK, aContextsCpuLen - i * CPU_PACKED_CHUNK);
 
@@ -635,7 +638,7 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
             contexts[i].contextsLen = length;
         }
 
-        for (int i = 0; i < aCpuTasksLen; ++i) {
+        for (i = 0; i < aCpuTasksLen; ++i) {
             aTasks[i] = threadPoolSubmit(alignsPackedThread, &(contexts[i]));
         }
 
@@ -653,18 +656,18 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
         AlignContext** balanced = (AlignContext**) malloc(balancedSize);
 
         // set phony contexts, init data
-        for (int i = 0; i < chunks; ++i) {
+        for (i = 0; i < chunks; ++i) {
             contexts[i].contexts = balanced + i * aContextsGpuLen;
             contexts[i].contextsLen = 0;
             contexts[i].cells = 0;
         }
         
         // balance tasks by round roobin, chunks are pretty small (CUDA cards)
-        for (int i = 0; i < aContextsGpuLen; ++i) {
+        for (i = 0; i < aContextsGpuLen; ++i) {
         
             int minIdx = 0;
             long long min = contexts[0].cells;
-            for (int j = 1; j < chunks; ++j) {
+            for (j = 1; j < chunks; ++j) {
                 if (contexts[j].cells < min) {
                     min = contexts[j].cells;
                     minIdx = j;
@@ -681,13 +684,13 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
         int cardsAdd = cardsLen % chunks;
         int cardsOff = 0;
 
-        for (int i = 0; i < chunks; ++i) {
+        for (i = 0; i < chunks; ++i) {
         
             int cCardsLen = cardsChunk + (i < cardsAdd);
             int* cCards = cards + cardsOff;
             cardsOff += cCardsLen;
 
-            for (int j = 0; j < contexts[i].contextsLen; ++j) {
+            for (j = 0; j < contexts[i].contextsLen; ++j) {
                 contexts[i].contexts[j]->cards = cCards;
                 contexts[i].contexts[j]->cardsLen = cCardsLen;
             }
@@ -697,12 +700,12 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
         Thread* tasks = (Thread*) malloc(tasksSize);
 
         // run gpu tasks first
-        for (int i = 0; i < chunks; ++i) {
+        for (i = 0; i < chunks; ++i) {
             threadCreate(&(tasks[i]), alignsThread, &(contexts[i]));
         }
         
         // wait for gpu tasks to finish
-        for (int i = 0; i < chunks; ++i) {
+        for (i = 0; i < chunks; ++i) {
             threadJoin(tasks[i]);
         }
 
@@ -711,7 +714,7 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
     }
 
     // wait for cpu tasks
-    for (int i = 0; i < aCpuTasksLen; ++i) {
+    for (i = 0; i < aCpuTasksLen; ++i) {
         threadPoolTaskWait(aTasks[i]);
         threadPoolTaskDelete(aTasks[i]);
     }
@@ -728,7 +731,7 @@ static void databaseSearchStep(DbAlignment*** dbAlignments,
     //**************************************************************************
     // CLEAN MEMORY
 
-    for (int i = 0; i < queriesLen; ++i) {
+    for (i = 0; i < queriesLen; ++i) {
         free(dbAlignmentsData[i]);
     }
     free(dbAlignmentsData);
@@ -996,12 +999,12 @@ static void* scoreCpuThread(void* param) {
 
     ScoreCpuContext* context = (ScoreCpuContext*) param;
 
-    int* scores      = context->scores;
-    int type         = context->type;
-    Chain* query     = context->query;
+    int* scores = context->scores;
+    int type = context->type;
+    Chain* query = context->query;
     Chain** database = context->database;
-    int databaseLen  = context->databaseLen;
-    Scorer* scorer   = context->scorer;
+    int databaseLen = context->databaseLen;
+    Scorer* scorer = context->scorer;
 
     scoreDatabaseCpu(scores, type, query, database, databaseLen, scorer);
 

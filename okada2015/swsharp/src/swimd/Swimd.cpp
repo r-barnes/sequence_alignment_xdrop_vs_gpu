@@ -2,7 +2,7 @@
 #include <limits>
 
 extern "C" {
-//#include <immintrin.h> // AVX2 and lower
+#include <immintrin.h> // AVX2 and lower
 }
 
 #include "Swimd.h"
