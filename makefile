@@ -1,8 +1,9 @@
 COMPILER = g++
 COMPILER_GPU = nvcc
 CC = gcc
-CFLAGS = -I. -O3 -Wall -Wextra -pedantic -ansi -c -Wno-write-strings -Iokada2015/
+CFLAGS = -I. -O3 -Wall -Wextra -pedantic -ansi -c -Wno-write-strings
 SEQINCLUDE=	-Iseqan
+INCLUDE=-Iokada2015/include/ -Lokada2015/lib -lswharp
 
 test: test-performance.cpp
 
