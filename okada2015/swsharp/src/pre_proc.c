@@ -378,31 +378,33 @@ extern void dumpFastaChains(char* path_) {
 //------------------------------------------------------------------------------
 // SCORES UTILS
 
-extern void scorerCreateScalar(Scorer** scorer, int match, int mismatch, 
-    int gapOpen, int gapExtend) {
+extern void scorerCreateScalar(
+    Scorer** scorer, 
+    int match, 
+    int mismatch, 
+    int gapOpen, 
+    int gapExtend
+){
     
     int scores[26 * 26];
     
-    int i, j;
-    for (i = 0; i < 26; ++i) {
-        for (j = 0; j < 26; ++j) {
-            scores[i * 26 + j] = i == j ? match : mismatch;
-        }
-    }
+    for (int i = 0; i < 26; ++i)
+    for (int j = 0; j < 26; ++j)
+        scores[i * 26 + j] = i == j ? match : mismatch;
     
     char name[100];
     sprintf(name, "match/mismatch +%d/%d", match, mismatch);
     
     *scorer = scorerCreate(name, scores, 26, gapOpen, gapExtend);
+    ASSERT(scorer!=NULL, "scorerCreateScalar: Failed to create scorer!");
 }
 
-extern void scorerCreateMatrix(Scorer** scorer, char* name, int gapOpen, 
+extern void scorerCreateMatrix(Scorer** scorer, const char* name, int gapOpen, 
     int gapExtend) {
     
     int index = -1;
   
-    int i;
-    for (i = 0; i < SCORERS_LEN; ++i) {
+    for (unsigned int i = 0; i < SCORERS_LEN; ++i) {
         if (strcmp(name, scorers[i].name) == 0) {
             index = i;
             break;
@@ -443,33 +445,33 @@ static int readFastaChainsPartNormal(Chain*** chains, int* chainsLen,
 
     if (*chains == NULL) {
         chainsSize = chainsStep;
-        *chains = (Chain**) malloc(chainsSize * sizeof(Chain*));
+        *chains    = (Chain**) malloc(chainsSize * sizeof(Chain*));
         *chainsLen = 0;
     } else {
         chainsSize = *chainsLen + chainsStep;
-        *chains = (Chain**) realloc(*chains, chainsSize * sizeof(Chain*));
+        *chains    = (Chain**) realloc(*chains, chainsSize * sizeof(Chain*));
     }
 
-    size_t strSize = 65000;
-    char* str = (char*) malloc(strSize * sizeof(char));
-    int strLen = 0;
+    size_t       strSize = 65000;
+    char*        str     = (char*) malloc(strSize * sizeof(char));
+    unsigned int strLen  = 0;
 
-    size_t nameSize = 4096;
-    char* name = (char*) malloc(nameSize * sizeof(char));
-    int nameLen = 0;
+    size_t       nameSize = 4096;
+    char*        name     = (char*) malloc(nameSize * sizeof(char));
+    unsigned int nameLen  = 0;
     
     char buffer[1024 * 1024];
     int isName = 1;
 
-    size_t bytesRead = 0;
+    size_t   bytesRead = 0;
     long int bytesOver = 0;
-    int status = 0;
+    int      status    = 0;
 
     int isEnd = feof(handle);
 
     while (!isEnd) {
         
-        int read = fread(buffer, sizeof(char), 1024 * 1024, handle);
+        size_t read = fread(buffer, sizeof(char), 1024 * 1024, handle);
         isEnd = feof(handle);
 
         bytesRead += read;
@@ -480,8 +482,7 @@ static int readFastaChainsPartNormal(Chain*** chains, int* chainsLen,
             break;
         }
 
-        int i;
-        for (i = 0; i < read; ++i) {
+        for (unsigned int i = 0; i < read; ++i) {
             
             char c = buffer[i];
 
@@ -556,10 +557,10 @@ static int readFastaChainsPartSerialized(Chain*** chains, int* chainsLen,
         *chainsLen = 0;
     }
 
-    int bufferSize = 65000;
+    unsigned int bufferSize = 65000;
     char* buffer = (char*) malloc(bufferSize);
     
-    int chainSize;
+    unsigned int chainSize;
 
     size_t bytesRead = 0;
     int status = 0;
@@ -608,13 +609,13 @@ static int skipFastaChainsPartNormal(Chain*** chains, int* chainsLen,
         *chains = (Chain**) realloc(*chains, chainsSize * sizeof(Chain*));
     }
 
-    char buffer[1024 * 1024];
-    int isName = 1;
-    int chainsRead = 0;
+    char         buffer[1024 * 1024];
+    int          isName     = 1;
+    unsigned int chainsRead = 0;
 
-    size_t bytesRead = 0;
+    size_t   bytesRead = 0;
     long int bytesOver = 0;
-    int status = 0;
+    int      status    = 0;
 
     int isEnd = feof(handle);
 
@@ -626,13 +627,12 @@ static int skipFastaChainsPartNormal(Chain*** chains, int* chainsLen,
             break;
         }
 
-        int read = fread(buffer, sizeof(char), 1024 * 1024, handle);
+        size_t read = fread(buffer, sizeof(char), 1024 * 1024, handle);
         isEnd = feof(handle);
 
         bytesRead += read;
 
-        int i;
-        for (i = 0; i < read; ++i) {
+        for (unsigned int i = 0; i < read; ++i) {
             
             char c = buffer[i];
 
@@ -659,8 +659,7 @@ static int skipFastaChainsPartNormal(Chain*** chains, int* chainsLen,
         }
     }
 
-    int chainIdx;
-    for (chainIdx = *chainsLen; chainIdx < *chainsLen + chainsRead; ++chainIdx) {
+    for (int chainIdx = *chainsLen; chainIdx < *chainsLen + chainsRead; ++chainIdx) {
         (*chains)[chainIdx] = NULL;
     }
 

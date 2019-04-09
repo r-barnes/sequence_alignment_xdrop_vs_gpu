@@ -67,6 +67,8 @@ static void outputStat(Alignment* alignment, FILE* file);
 
 static void outputStatPair(Alignment* alignment, FILE* file);
 
+static void outputNone(Alignment* alignment, FILE* file);
+
 // database output 
 static OutputDatabaseFunction outputDatabaseFunction(int type);
 
@@ -82,6 +84,9 @@ static void outputDatabaseBlastM8(DbAlignment** dbAlignments,
 static void outputDatabaseBlastM9(DbAlignment** dbAlignments, 
     int dbAlignmentsLen, FILE* file);
 
+static void outputDatabaseNone(DbAlignment** dbAlignments, 
+    int dbAlignmentsLen, FILE* file);
+
 //******************************************************************************
 
 //******************************************************************************
@@ -91,16 +96,16 @@ extern int checkAlignment(Alignment* alignment) {
 
     Scorer* scorer = alignmentGetScorer(alignment);
     
-    Chain* query = alignmentGetQuery(alignment);
+    Chain* query  = alignmentGetQuery(alignment);
     Chain* target = alignmentGetTarget(alignment);
 
-    int queryLen = chainGetLength(query);
+    int queryLen  = chainGetLength(query);
     int targetLen = chainGetLength(target);
     
-    int queryStart = alignmentGetQueryStart(alignment);
-    int queryEnd = alignmentGetQueryEnd(alignment);
+    int queryStart  = alignmentGetQueryStart(alignment);
+    int queryEnd    = alignmentGetQueryEnd(alignment);
     int targetStart = alignmentGetTargetStart(alignment);
-    int targetEnd = alignmentGetTargetEnd(alignment);
+    int targetEnd   = alignmentGetTargetEnd(alignment);
     
     if (queryStart == 0 && queryEnd == 0 && targetStart == 0 && targetEnd == 0 &&
         alignmentGetPathLen(alignment) == 0 && alignmentGetScore(alignment) == 0) {
@@ -114,14 +119,14 @@ extern int checkAlignment(Alignment* alignment) {
         return 0;
     }
       
-    int isQueryGap = 0;
+    int isQueryGap  = 0;
     int isTargetGap = 0;
-    int score = 0;
+    int score       = 0;
     
-    int gapOpen = scorerGetGapOpen(scorer);
+    int gapOpen   = scorerGetGapOpen(scorer);
     int gapExtend = scorerGetGapExtend(scorer);
     
-    int queryIdx = queryEnd;
+    int queryIdx  = queryEnd;
     int targetIdx = targetEnd;
     
     int i;
@@ -195,12 +200,12 @@ extern Alignment* readAlignment(char* path) {
 
 extern void outputAlignment(Alignment* alignment, char* path, int type) {
 
-    int queryStart = alignmentGetQueryStart(alignment);
-    int queryEnd = alignmentGetQueryEnd(alignment);
+    int queryStart  = alignmentGetQueryStart(alignment);
+    int queryEnd    = alignmentGetQueryEnd(alignment);
     int targetStart = alignmentGetTargetStart(alignment);
-    int targetEnd = alignmentGetTargetEnd(alignment);
-    int pathLen = alignmentGetPathLen(alignment);
-    int score = alignmentGetScore(alignment);
+    int targetEnd   = alignmentGetTargetEnd(alignment);
+    int pathLen     = alignmentGetPathLen(alignment);
+    int score       = alignmentGetScore(alignment);
 
     FILE* file = path == NULL ? stdout : fileSafeOpen(path, "w");
 
@@ -255,22 +260,17 @@ extern void outputShotgunDatabase(DbAlignment*** dbAlignments,
     
     FILE* file = path == NULL ? stdout : fileSafeOpen(path, "w");
 
-    OutputDatabaseFunction function = outputDatabaseFunction(type);
+    const OutputDatabaseFunction function = outputDatabaseFunction(type);
 
-    int i;
-    for (i = 0; i < dbAlignmentsLen; ++i) {
+    for (int i = 0; i < dbAlignmentsLen; ++i)
         function(dbAlignments[i], dbAlignmentsLens[i], file);
-    }
     
     if (file != stdout) fclose(file);
 }
 
 extern void deleteFastaChains(Chain** chains, int chainsLen) {
-
-    int i;
-    for (i = 0; i < chainsLen; ++i) {
+    for (int i = 0; i < chainsLen; ++i)
         chainDelete(chains[i]);
-    }
     
     free(chains);
     chains = NULL;
@@ -288,10 +288,8 @@ extern void deleteDatabase(DbAlignment** dbAlignments, int dbAlignmentsLen) {
 extern void deleteShotgunDatabase(DbAlignment*** dbAlignments, 
     int* dbAlignmentsLens, int dbAlignmentsLen) {
     
-    int i;
-    for (i = 0; i < dbAlignmentsLen; ++i) {
+    for (int i = 0; i < dbAlignmentsLen; ++i)
         deleteDatabase(dbAlignments[i], dbAlignmentsLens[i]);
-    }
     free(dbAlignments);
     free(dbAlignmentsLens);
 }
@@ -407,8 +405,8 @@ static void aligmentStr(char** queryStr, char** targetStr,
 
 static void printFastaName(const char* name, FILE* file) {
 
-    char* pp = (char*) name;
-    char* p = strchr(name, ' ');
+    const char* pp = (char*) name;
+    const char* p = strchr(name, ' ');
     int len = 0;
     
     while (p != NULL) {
@@ -472,6 +470,8 @@ static OutputFunction outputFunction(int type) {
         return outputStat;
     case SW_OUT_DUMP:
         return outputDump;
+    case SW_OUT_NONE:
+        return outputNone;
     default:
         ERROR("Wrong output type");
     }
@@ -502,24 +502,24 @@ static void outputPair(Alignment* alignment, FILE* file) {
     
     aligmentStr(&queryStr, &targetStr, alignment, gapItem);
 
-    const char* queryName = chainGetName(query);
-    char* querySpace = strchr(queryName, ' ');
+    const char* queryName  = chainGetName(query);
+    const char* querySpace = strchr(queryName, ' ');
     const int queryNameLen = MIN(9, querySpace ? querySpace - queryName: 9);
 
-    const char* targetName = chainGetName(target);
-    char* targetSpace = strchr(targetName, ' ');
+    const char* targetName  = chainGetName(target);
+    const char* targetSpace = strchr(targetName, ' ');
     const int targetNameLen = MIN(9, targetSpace ? targetSpace - targetName: 9);
 
-    int queryStart = alignmentGetQueryStart(alignment);
+    int queryStart  = alignmentGetQueryStart(alignment);
     int targetStart = alignmentGetTargetStart(alignment);
-    int queryEnd = queryStart;
-    int targetEnd = targetStart;
+    int queryEnd    = queryStart;
+    int targetEnd   = targetStart;
         
-    char queryLine[50];
+    char queryLine [50];
     char targetLine[50];
     char markupLine[50];
     
-    memset(queryLine, 32, 50);
+    memset(queryLine,  32, 50);
     memset(targetLine, 32, 50);
     memset(markupLine, 32, 50);
     
@@ -530,7 +530,7 @@ static void outputPair(Alignment* alignment, FILE* file) {
     int i;
     for (i = 0; i < pathLen; ++i) {
     
-        queryLine[i % 50] = queryStr[i];
+        queryLine [i % 50] = queryStr[i];
         targetLine[i % 50] = targetStr[i];
         
         if (queryStr[i] == targetStr[i]) {
@@ -560,7 +560,7 @@ static void outputPair(Alignment* alignment, FILE* file) {
             queryStart = queryEnd + (queryStr[i] != gapItem);
             targetStart = targetEnd + (targetStr[i] != gapItem);
             
-            memset(queryLine, 32, 50 * sizeof(char));
+            memset(queryLine,  32, 50 * sizeof(char));
             memset(markupLine, 32, 50 * sizeof(char));
             memset(targetLine, 32, 50 * sizeof(char));
         }
@@ -743,6 +743,10 @@ static void outputStatPair(Alignment* alignment, FILE* file) {
     outputPair(alignment, file);
 }
 
+static void outputNone(Alignment* alignment, FILE* file){
+    return;
+}
+
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -758,6 +762,8 @@ static OutputDatabaseFunction outputDatabaseFunction(int type) {
         return outputDatabaseBlastM8;
     case SW_OUT_DB_BLASTM9:
         return outputDatabaseBlastM9;
+    case SW_OUT_NONE:
+        return outputDatabaseNone;
     default:
         ERROR("Wrong output type");
     }
@@ -776,7 +782,7 @@ static void outputDatabaseLight(DbAlignment** dbAlignments,
     const char* name = chainGetName(query);
     int length = chainGetLength(query);
     
-    fprintf(file, "query: %s | lenght: %d\n", name, length);
+    fprintf(file, "query: %s | length: %d\n", name, length);
     
     int i;
     for (i = 0; i < dbAlignmentsLen; ++i) {
@@ -1046,6 +1052,10 @@ static void outputDatabaseBlastM9(DbAlignment** dbAlignments,
                   "gap openings,q. start,q. end,s. start,s. end,e-value,score\n");
               
     outputDatabaseBlastM8(dbAlignments, dbAlignmentsLen, file);
+}
+
+static void outputDatabaseNone(DbAlignment** dbAlignments, int dbAlignmentsLen, FILE* file) {
+    return;
 }
 
 //------------------------------------------------------------------------------
